@@ -29,7 +29,7 @@ public class DirectPrintController {
     public ResponseEntity printers() {
         PrintService[] services = PrintServiceLookup.lookupPrintServices(null, null);
         log.info("Available printers: " + Arrays.asList(services));
-        return new ResponseEntity<>( Arrays.stream(services).map(printService -> printService.getName()), HttpStatus.OK);
+        return new ResponseEntity<>( Arrays.stream(services).map(PrintService::getName), HttpStatus.OK);
     }
 
     @GetMapping("/printer/default")
