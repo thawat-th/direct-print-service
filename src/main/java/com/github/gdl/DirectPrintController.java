@@ -1,9 +1,11 @@
 package com.github.gdl;
 
 
+import com.google.common.io.ByteStreams;
 import io.swagger.annotations.ApiOperation;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.codec.binary.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,13 +18,15 @@ import javax.print.attribute.standard.Copies;
 import javax.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Arrays;
 
 @RestController
-@RequestMapping(value = "/v1/drp")
-@Slf4j
+@RequestMapping(value = "/v1")
 @CrossOrigin(origins = "*")
 public class DirectPrintController {
+    private static final Logger log = LoggerFactory.getLogger(DirectPrintController.class);
 
     @GetMapping("/printers")
     @ApiOperation(value = "Available printers")
@@ -34,9 +38,9 @@ public class DirectPrintController {
 
     @GetMapping("/printer/default")
     @ApiOperation(value = "Get Default printer")
-    public ResponseEntity defaultp() {
+    public ResponseEntity defaults() {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
-        return new ResponseEntity<>(service, HttpStatus.OK);
+        return new ResponseEntity<>(service.getName(), HttpStatus.OK);
     }
 
     @PostMapping("/print")
@@ -48,8 +52,18 @@ public class DirectPrintController {
 
     @PostMapping("/print/binary")
     @ApiOperation(value = "Printing a base64 encoded")
-    public ResponseEntity printBinary(@NotNull String data) throws PrintException {
+    public ResponseEntity printBinary(@RequestParam @NotNull String data) throws PrintException {
         byte[] bytes  = Base64.decodeBase64(data);
+        this.printJob(bytes);
+        return new ResponseEntity<>("", HttpStatus.OK);
+    }
+
+    @PostMapping("/print/url")
+    @ApiOperation(value = "Print form URL")
+    public ResponseEntity printUri(@RequestParam @NotNull String url) throws PrintException, IOException {
+        URLConnection urlConnection = new URL(url).openConnection();
+        urlConnection.addRequestProperty("User-Agent", "Mozilla/4.0");
+        byte[] bytes  = ByteStreams.toByteArray(urlConnection.getInputStream());
         this.printJob(bytes);
         return new ResponseEntity<>("", HttpStatus.OK);
     }

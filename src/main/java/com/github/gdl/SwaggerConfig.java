@@ -29,7 +29,7 @@ public class SwaggerConfig {
 
     private ApiInfo apiEndPointsInfo() {
         return new ApiInfoBuilder()
-                .title("Direct print to client local printer")
+                .title("Direct print service")
                 .description("Direct print to client local printer API Documentation")
                 .license("Apache License Version 2.0")
                 .licenseUrl("https://www.apache.org/licenses/LICENSE-2.0")
