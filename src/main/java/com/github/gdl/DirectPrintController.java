@@ -3,6 +3,7 @@ package com.github.gdl;
 
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,20 +42,34 @@ public class DirectPrintController {
     @PostMapping("/print")
     @ApiOperation(value = "Printing")
     public ResponseEntity print( @RequestParam @NotNull MultipartFile file) throws IOException, PrintException {
+        this.printJob(file.getBytes());
+        return new ResponseEntity<>("", HttpStatus.OK);
+    }
+
+    @PostMapping("/print/binary")
+    @ApiOperation(value = "Printing a base64 encoded")
+    public ResponseEntity printBinary(@NotNull String data) throws PrintException {
+        byte[] bytes  = Base64.decodeBase64(data);
+        this.printJob(bytes);
+        return new ResponseEntity<>("", HttpStatus.OK);
+    }
+
+    private void printJob(byte[] bytes) throws PrintException {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
         if (service == null) {
             throw new IllegalStateException("Printer not found");
         }
 
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(file.getBytes());
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
         DocFlavor flavor = DocFlavor.INPUT_STREAM.AUTOSENSE;
         PrintRequestAttributeSet attributeSet = new HashPrintRequestAttributeSet();
         attributeSet.add(new Copies(1));
 
         DocPrintJob job = service.createPrintJob();
         Doc print = new SimpleDoc( byteArrayInputStream, flavor, null );
+
         job.print(print, null );
-        return new ResponseEntity<>(service.getName(), HttpStatus.OK);
     }
+
 
 }
