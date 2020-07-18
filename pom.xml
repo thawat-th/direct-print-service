@@ -12,10 +12,11 @@
     <artifactId>direct-print-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>direct-print-service</name>
-    <description>Spring Boot Direct print to client local printer</description>
+    <description>Direct print to client local printer</description>
 
     <properties>
         <java.version>1.8</java.version>
+        <maven.test.skip>true</maven.test.skip>
         <swagger.version>2.9.2</swagger.version>
     </properties>
 
@@ -25,17 +26,18 @@
             <artifactId>spring-boot-starter-web</artifactId>
             <exclusions>
                 <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+                <exclusion>
                     <groupId>org.hibernate.validator</groupId>
                     <artifactId>hibernate-validator</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
+            <artifactId>spring-boot-starter-jetty</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -48,20 +50,10 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency> <!-- swagger -->
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-            <version>${swagger.version}</version>
-        </dependency>
         <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
-            <version>${swagger.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-bean-validators</artifactId>
-            <version>${swagger.version}</version>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+            <version>1.4.3</version>
         </dependency>
     </dependencies>
 
