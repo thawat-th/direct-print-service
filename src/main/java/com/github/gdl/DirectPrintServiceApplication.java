@@ -5,13 +5,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 @SpringBootApplication
-@RestController
 public class DirectPrintServiceApplication {
     private static ConfigurableApplicationContext context;
 
@@ -32,11 +27,6 @@ public class DirectPrintServiceApplication {
     @GetMapping("/restart")
     public void restarts() {
         DirectPrintServiceApplication.restart();
-    }
-
-    @GetMapping("/")
-    public void root(HttpServletResponse response) throws IOException {
-        response.sendRedirect("/swagger-ui.html");
     }
 
 }

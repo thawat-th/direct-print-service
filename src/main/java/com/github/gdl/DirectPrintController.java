@@ -2,9 +2,11 @@ package com.github.gdl;
 
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
@@ -43,23 +45,24 @@ public class DirectPrintController {
         return new ResponseEntity<>(service.getName(), HttpStatus.OK);
     }
 
-    @PostMapping(value = "/print", consumes = "multipart/form-data")
-    @Operation(summary = "Printing")
-    public ResponseEntity print(@RequestParam @NotNull MultipartFile file) throws IOException, PrintException {
-        this.printJob(file.getBytes());
-        return new ResponseEntity<>("", HttpStatus.OK);
-    }
-
-    @PostMapping(value = "/print/binary", consumes = "multipart/form-data")
-    @Operation(summary = "Printing a base64 encoded")
-    public ResponseEntity printBinary(@RequestParam @NotNull String data) throws PrintException {
+    @PostMapping(value = "/print")
+    @Operation(summary = "Printing raw data")
+    public ResponseEntity print(
+            @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data) throws PrintException {
         byte[] bytes = Base64.getDecoder().decode(data);
         this.printJob(bytes);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
+    @PostMapping(value = "/print/binary" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Printing binary data")
+    public ResponseEntity printBinary(@RequestPart("file") MultipartFile file) throws PrintException, IOException {
+        this.printJob(file.getBytes());
+        return new ResponseEntity<>("", HttpStatus.OK);
+    }
+
     @PostMapping("/print/url")
-    @Operation(summary = "Print form URL")
+    @Operation(summary = "Printing form URL")
     public ResponseEntity printUri(@RequestParam @NotNull String url) throws PrintException, IOException {
         URLConnection urlConnection = new URL(url).openConnection();
         urlConnection.addRequestProperty("User-Agent", "Mozilla/4.0");
