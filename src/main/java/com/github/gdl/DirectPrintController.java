@@ -50,14 +50,14 @@ public class DirectPrintController {
     public ResponseEntity print(
             @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data) throws PrintException {
         byte[] bytes = Base64.getDecoder().decode(data);
-        this.printJob(bytes);
+        this.printJob(bytes, 1);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @PostMapping(value = "/print/binary" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Printing binary data")
     public ResponseEntity printBinary(@RequestPart("file") MultipartFile file) throws PrintException, IOException {
-        this.printJob(file.getBytes());
+        this.printJob(file.getBytes(), 1);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
@@ -67,21 +67,20 @@ public class DirectPrintController {
         URLConnection urlConnection = new URL(url).openConnection();
         urlConnection.addRequestProperty("User-Agent", "Mozilla/4.0");
         byte[] bytes = StreamUtils.copyToByteArray(urlConnection.getInputStream());
-        this.printJob(bytes);
+        this.printJob(bytes, 1);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
-    private void printJob(byte[] bytes) throws PrintException {
+    private void printJob(byte[] bytes, int copies) throws PrintException {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
         if (service == null) {
-            throw new IllegalStateException("Printer not found");
+            throw new IllegalStateException("No default print service found.");
         }
 
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
         DocFlavor flavor = DocFlavor.INPUT_STREAM.AUTOSENSE;
         PrintRequestAttributeSet attributeSet = new HashPrintRequestAttributeSet();
-        attributeSet.add(new Copies(1));
-
+        attributeSet.add(new Copies(copies));
         DocPrintJob job = service.createPrintJob();
         Doc print = new SimpleDoc( byteArrayInputStream, flavor, null );
 
