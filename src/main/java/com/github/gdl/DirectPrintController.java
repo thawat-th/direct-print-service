@@ -3,6 +3,8 @@ package com.github.gdl;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.printing.PDFPrintable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -12,12 +14,11 @@ import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.print.*;
-import javax.print.attribute.HashPrintRequestAttributeSet;
-import javax.print.attribute.PrintRequestAttributeSet;
-import javax.print.attribute.standard.Copies;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
 import javax.validation.constraints.NotNull;
-import java.io.ByteArrayInputStream;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -48,44 +49,47 @@ public class DirectPrintController {
     @PostMapping(value = "/print")
     @Operation(summary = "Printing raw data")
     public ResponseEntity print(
-            @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data) throws PrintException {
+            @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data,
+            @RequestParam(value = "copies", defaultValue = "1") int copies) throws IOException, PrinterException {
         byte[] bytes = Base64.getDecoder().decode(data);
-        this.printJob(bytes, 1);
+        this.printJob(bytes, copies);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @PostMapping(value = "/print/binary" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Printing binary data")
-    public ResponseEntity printBinary(@RequestPart("file") MultipartFile file) throws PrintException, IOException {
-        this.printJob(file.getBytes(), 1);
+    public ResponseEntity printBinary(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "copies", defaultValue = "1") int copies) throws IOException, PrinterException {
+        this.printJob(file.getBytes(), copies);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @PostMapping("/print/url")
     @Operation(summary = "Printing form URL")
-    public ResponseEntity printUri(@RequestParam @NotNull String url) throws PrintException, IOException {
+    public ResponseEntity printUri(
+            @RequestParam @NotNull String url,
+            @RequestParam(value = "copies", defaultValue = "1") int copies) throws IOException, PrinterException {
         URLConnection urlConnection = new URL(url).openConnection();
         urlConnection.addRequestProperty("User-Agent", "Mozilla/4.0");
         byte[] bytes = StreamUtils.copyToByteArray(urlConnection.getInputStream());
-        this.printJob(bytes, 1);
+        this.printJob(bytes, copies);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
-    private void printJob(byte[] bytes, int copies) throws PrintException {
+    private void printJob(byte[] bytes, int copies) throws IOException, PrinterException {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
         if (service == null) {
             throw new IllegalStateException("No default print service found.");
         }
 
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
-        DocFlavor flavor = DocFlavor.INPUT_STREAM.AUTOSENSE;
-        PrintRequestAttributeSet attributeSet = new HashPrintRequestAttributeSet();
-        attributeSet.add(new Copies(copies));
-        DocPrintJob job = service.createPrintJob();
-        Doc print = new SimpleDoc( byteArrayInputStream, flavor, null );
-
-        job.print(print, null );
+        try (PDDocument doc = PDDocument.load(bytes)){
+            PrinterJob job = PrinterJob.getPrinterJob();
+            job.setCopies(copies);
+            job.setJobName("Direct Print Service");
+            job.setPrintService(service);
+            job.setPrintable(new PDFPrintable(doc));
+            job.print();
+        }
     }
-
-
 }
