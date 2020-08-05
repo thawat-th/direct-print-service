@@ -20,7 +20,7 @@ mvn spring-boot:run
 Access
 --------
 ```
-http://localhost:9100/swagger-ui.html
+http://localhost:9100
 ```
 
 License
