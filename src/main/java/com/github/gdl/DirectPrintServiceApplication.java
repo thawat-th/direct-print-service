@@ -3,15 +3,23 @@ package com.github.gdl;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import java.awt.*;
+
 @SpringBootApplication
 public class DirectPrintServiceApplication {
-    private static ConfigurableApplicationContext context;
+    public static ConfigurableApplicationContext context;
 
     public static void main(String[] args) {
-        context = SpringApplication.run(DirectPrintServiceApplication.class, args);
+        context = new SpringApplicationBuilder(DirectPrintServiceApplication.class).headless(false).run(args);
+        if(SystemTray.isSupported()){
+            DesktopConfig desktopConfig = new DesktopConfig();
+            desktopConfig.openTrayIcon();
+        }
+
     }
 
     public static void restart() {

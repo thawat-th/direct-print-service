@@ -49,47 +49,43 @@ public class DirectPrintController {
     @PostMapping(value = "/print")
     @Operation(summary = "Printing raw data")
     public ResponseEntity print(
-            @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data,
-            @RequestParam(value = "copies", defaultValue = "1") int copies) throws IOException, PrinterException {
+            @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data) throws IOException, PrinterException {
         byte[] bytes = Base64.getDecoder().decode(data);
-        this.printJob(bytes, copies);
+        this.printJob(bytes);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @PostMapping(value = "/print/binary" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Printing binary data")
     public ResponseEntity printBinary(
-            @RequestPart("file") MultipartFile file,
-            @RequestParam(value = "copies", defaultValue = "1") int copies) throws IOException, PrinterException {
-        this.printJob(file.getBytes(), copies);
+            @RequestPart("file") MultipartFile file) throws IOException, PrinterException {
+        this.printJob(file.getBytes());
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @PostMapping("/print/url")
     @Operation(summary = "Printing form URL")
     public ResponseEntity printUri(
-            @RequestParam @NotNull String url,
-            @RequestParam(value = "copies", defaultValue = "1") int copies) throws IOException, PrinterException {
+            @RequestParam @NotNull String url) throws IOException, PrinterException {
         URLConnection urlConnection = new URL(url).openConnection();
         urlConnection.addRequestProperty("User-Agent", "Mozilla/4.0");
         byte[] bytes = StreamUtils.copyToByteArray(urlConnection.getInputStream());
-        this.printJob(bytes, copies);
+        this.printJob(bytes);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
-    private void printJob(byte[] bytes, int copies) throws IOException, PrinterException {
+    private void printJob(byte[] bytes) throws IOException, PrinterException {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
         if (service == null) {
             throw new IllegalStateException("No default print service found.");
         }
 
-        try (PDDocument doc = PDDocument.load(bytes)){
-            PrinterJob job = PrinterJob.getPrinterJob();
-            job.setCopies(copies);
-            job.setJobName("Direct Print Service");
-            job.setPrintService(service);
-            job.setPrintable(new PDFPrintable(doc));
-            job.print();
-        }
+        PDDocument doc = PDDocument.load(bytes);
+        PrinterJob job = PrinterJob.getPrinterJob();
+        job.setCopies(1);
+        job.setJobName("Direct Print Service");
+        job.setPrintService(service);
+        job.setPrintable(new PDFPrintable(doc));
+        job.print();
     }
 }
