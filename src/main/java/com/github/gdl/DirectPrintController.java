@@ -63,12 +63,13 @@ public class DirectPrintController {
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
-    @PostMapping("/print/url")
+    @RequestMapping(value = "/print/url", method = {RequestMethod.POST, RequestMethod.GET} )
     @Operation(summary = "Printing form URL")
     public ResponseEntity printUri(
             @RequestParam @NotNull String url) throws IOException, PrinterException {
         URLConnection urlConnection = new URL(url).openConnection();
         urlConnection.addRequestProperty("User-Agent", "Mozilla/4.0");
+        log.info(urlConnection.getContentType());
         byte[] bytes = StreamUtils.copyToByteArray(urlConnection.getInputStream());
         this.printJob(bytes);
         return new ResponseEntity<>("", HttpStatus.OK);
@@ -87,5 +88,7 @@ public class DirectPrintController {
         job.setPrintService(service);
         job.setPrintable(new PDFPrintable(doc));
         job.print();
+
+        doc.close();
     }
 }
