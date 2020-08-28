@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.printing.PDFPrintable;
+import org.apache.pdfbox.printing.Scaling;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -17,8 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.validation.constraints.NotNull;
-import java.awt.print.PrinterException;
-import java.awt.print.PrinterJob;
+import java.awt.print.*;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -49,7 +49,14 @@ public class DirectPrintController {
     @PostMapping(value = "/print")
     @Operation(summary = "Printing raw data")
     public ResponseEntity print(
-            @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data) throws IOException, PrinterException {
+            @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data,
+            @RequestParam @NotNull Scaling scaling,
+            @RequestParam @NotNull boolean showPageBorder,
+            @RequestParam(value = "dpi", required=false, defaultValue = "300") float dpi,
+            @RequestParam(value = "width", required=false, defaultValue = "595") double width,
+            @RequestParam(value = "height", required=false, defaultValue = "842") double height,
+            @RequestParam @NotNull Orientation orientation,
+            @RequestParam @NotNull boolean withPrintDialog) throws IOException, PrinterException {
         byte[] bytes = Base64.getDecoder().decode(data);
         this.printJob(bytes);
         return new ResponseEntity<>("", HttpStatus.OK);
@@ -58,37 +65,73 @@ public class DirectPrintController {
     @PostMapping(value = "/print/binary" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Printing binary data")
     public ResponseEntity printBinary(
-            @RequestPart("file") MultipartFile file) throws IOException, PrinterException {
+            @RequestPart("file") MultipartFile file,
+            @RequestParam @NotNull Scaling scaling,
+            @RequestParam @NotNull boolean showPageBorder,
+            @RequestParam(value = "dpi", required=false, defaultValue = "300") float dpi,
+            @RequestParam(value = "width", required=false, defaultValue = "595") double width,
+            @RequestParam(value = "height", required=false, defaultValue = "842") double height,
+            @RequestParam @NotNull Orientation orientation,
+            @RequestParam @NotNull boolean withPrintDialog) throws IOException, PrinterException {
         this.printJob(file.getBytes());
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/print/url", method = {RequestMethod.POST, RequestMethod.GET} )
+    @PostMapping(value = "/print/url")
     @Operation(summary = "Printing form URL")
     public ResponseEntity printUri(
-            @RequestParam @NotNull String url) throws IOException, PrinterException {
+            @RequestParam @NotNull String url,
+            @RequestParam @NotNull Scaling scaling,
+            @RequestParam @NotNull boolean showPageBorder,
+            @RequestParam(value = "dpi", required=false, defaultValue = "300") float dpi,
+            @RequestParam(value = "width", required=false, defaultValue = "595") double width,
+            @RequestParam(value = "height", required=false, defaultValue = "842") double height,
+            @RequestParam @NotNull Orientation orientation,
+            @RequestParam @NotNull boolean withPrintDialog) throws IOException, PrinterException {
         URLConnection urlConnection = new URL(url).openConnection();
         urlConnection.addRequestProperty("User-Agent", "Mozilla/4.0");
         log.info(urlConnection.getContentType());
         byte[] bytes = StreamUtils.copyToByteArray(urlConnection.getInputStream());
-        this.printJob(bytes);
+        this.printJob(bytes, scaling, showPageBorder, dpi, width, height, orientation, withPrintDialog);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     private void printJob(byte[] bytes) throws IOException, PrinterException {
+        this.printJob(bytes, Scaling.SHRINK_TO_FIT, false, 300, 595, 842, Orientation.PORTRAIT,false);
+    }
+
+    private void printJob(byte[] bytes, Scaling scaling, boolean showPageBorder, float dpi, double width, double height, Orientation orientation, boolean withPrintDialog) throws IOException, PrinterException {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
         if (service == null) {
             throw new IllegalStateException("No default print service found.");
         }
 
         PDDocument doc = PDDocument.load(bytes);
+        PDFPrintable printable = new PDFPrintable(doc, scaling, showPageBorder, dpi);
+
         PrinterJob job = PrinterJob.getPrinterJob();
-        job.setCopies(1);
-        job.setJobName("Direct Print Service");
-        job.setPrintService(service);
-        job.setPrintable(new PDFPrintable(doc));
-        job.print();
+        Paper paper = new Paper();
+        paper.setSize(width, height);
+        paper.setImageableArea(0, 0, paper.getWidth(), paper.getHeight());
+
+        PageFormat pageFormat = new PageFormat(); // or printerJob.defaultPage();
+        pageFormat.setPaper(paper);
+        pageFormat.setOrientation(orientation.getValue());
+
+        Book book = new Book();
+        book.append(printable, pageFormat, doc.getNumberOfPages());
+        job.setPageable(book);
+
+        if (withPrintDialog) {
+            if (job.printDialog()) {
+                job.print();
+            }
+        }
+        else {
+            job.print();
+        }
 
         doc.close();
     }
+
 }
