@@ -32,23 +32,40 @@ public class DirectPrintController {
     private static final Logger log = LoggerFactory.getLogger(DirectPrintController.class);
 
     @GetMapping("/printers")
+    @ResponseStatus(code = HttpStatus.OK)
     @Operation(summary = "Available printers")
-    public ResponseEntity printers() {
+    ResponseEntity printers() {
         PrintService[] services = PrintServiceLookup.lookupPrintServices(null, null);
         log.info("Available printers: " + Arrays.asList(services));
         return new ResponseEntity<>(Arrays.stream(services).map(PrintService::getName), HttpStatus.OK);
     }
 
     @GetMapping("/printer/default")
+    @ResponseStatus(code = HttpStatus.OK)
     @Operation(summary = "Get Default printer")
-    public ResponseEntity defaults() {
+    ResponseEntity defaults() {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
         return new ResponseEntity<>(service.getName(), HttpStatus.OK);
     }
 
+    @PostMapping("/printer/default")
+    @ResponseStatus(code = HttpStatus.OK)
+    @Operation(summary = "Set Default printer")
+    ResponseEntity defaults(@RequestParam String printerName) {
+        PrinterJob job = PrinterJob.getPrinterJob();
+        PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
+        Arrays.stream(printServices).filter(printer -> printer.getName().equals(printerName)).forEach(printer -> {
+            try {
+                job.setPrintService(printer);
+            } catch (PrinterException e) {}
+        });
+        return new ResponseEntity<>("Succeeded", HttpStatus.OK);
+    }
+
     @PostMapping(value = "/print")
+    @ResponseStatus(code = HttpStatus.OK)
     @Operation(summary = "Printing raw data")
-    public ResponseEntity print(
+    ResponseEntity print(
             @Parameter(description = "Base64 encoded") @RequestParam @NotNull String data,
             @RequestParam @NotNull Scaling scaling,
             @RequestParam @NotNull boolean showPageBorder,
@@ -63,8 +80,9 @@ public class DirectPrintController {
     }
 
     @PostMapping(value = "/print/binary" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(code = HttpStatus.OK)
     @Operation(summary = "Printing binary data")
-    public ResponseEntity printBinary(
+    ResponseEntity printBinary(
             @RequestPart("file") MultipartFile file,
             @RequestParam @NotNull Scaling scaling,
             @RequestParam @NotNull boolean showPageBorder,
@@ -78,8 +96,9 @@ public class DirectPrintController {
     }
 
     @PostMapping(value = "/print/url")
+    @ResponseStatus(code = HttpStatus.OK)
     @Operation(summary = "Printing form URL")
-    public ResponseEntity printUri(
+    ResponseEntity printUri(
             @RequestParam @NotNull String url,
             @RequestParam @NotNull Scaling scaling,
             @RequestParam @NotNull boolean showPageBorder,
@@ -96,11 +115,11 @@ public class DirectPrintController {
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
-    private void printJob(byte[] bytes) throws IOException, PrinterException {
+    void printJob(byte[] bytes) throws IOException, PrinterException {
         this.printJob(bytes, Scaling.SHRINK_TO_FIT, false, 300, 595, 842, Orientation.PORTRAIT,false);
     }
 
-    private void printJob(byte[] bytes, Scaling scaling, boolean showPageBorder, float dpi, double width, double height, Orientation orientation, boolean withPrintDialog) throws IOException, PrinterException {
+    void printJob(byte[] bytes, Scaling scaling, boolean showPageBorder, float dpi, double width, double height, Orientation orientation, boolean withPrintDialog) throws IOException, PrinterException {
         PrintService service = PrintServiceLookup.lookupDefaultPrintService();
         if (service == null) {
             throw new IllegalStateException("No default print service found.");
